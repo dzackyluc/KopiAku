@@ -21,7 +21,7 @@ A point-of-sale backend for KopiAku coffee shop implemented with .NET and GraphQ
 ## Getting started
 
 Prerequisites
-- .NET SDK 7.0+ installed
+- .NET SDK 9.0+ installed
 - Database (Postgres / SQL Server) or use SQLite for local dev
 - (Optional) Docker & Docker Compose
 
