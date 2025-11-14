@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using KopiAku.Models;
+using KopiAku.Services;
 using KopiAku.DTOs;
 using Amazon.S3;
 using Amazon.S3.Model;
@@ -16,7 +17,8 @@ namespace KopiAku.GraphQL.Users
         [AllowAnonymous]
         public async Task<LoginResponse> LoginAsync(
             LoginInput input,
-            [Service] IMongoDatabase database)
+            [Service] IMongoDatabase database,
+            [Service] JWTService jwtService)
         {
             var collection = database.GetCollection<User>("users");
 
@@ -27,7 +29,7 @@ namespace KopiAku.GraphQL.Users
             }
 
             // In a real application, generate a JWT or similar token here
-            var token = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+            var token = jwtService.GenerateToken(user);
 
             return new LoginResponse
             {
@@ -106,7 +108,7 @@ namespace KopiAku.GraphQL.Users
                         ContentType = profilePicture.ContentType
                     };
                     await _s3Client.PutObjectAsync(putRequest);
-                user.ProfilePictureUrl = $"https://storage.czn.id/{_bucketName}/{imageKey}";
+                user.ProfilePictureUrl = $"https://storage.czn.my.id/{_bucketName}/{imageKey}";
             }
 
             user.Name = input.Name ?? user.Name;

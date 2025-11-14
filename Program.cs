@@ -10,6 +10,7 @@ using KopiAku.Settings;
 using KopiAku.Services;
 using KopiAku.GraphQL;
 using KopiAku.GraphQL.Users;
+using KopiAku.GraphQL.Menus;
 using KopiAku.GraphQL.Presences;
 
 Env.Load();
@@ -17,7 +18,6 @@ Env.Load();
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 builder.Services.Configure<MongoDBSettings>(
@@ -83,6 +83,8 @@ builder.Services.AddGraphQLServer()
     .AddMutationType<Mutation>()
     .AddTypeExtension<UserQueries>()
     .AddTypeExtension<UserMutations>()
+    .AddTypeExtension<MenuQueries>()
+    .AddTypeExtension<MenuMutations>()
     .AddTypeExtension<PresenceQueries>()
     .AddTypeExtension<PresenceMutations>()
     .AddAuthorization()

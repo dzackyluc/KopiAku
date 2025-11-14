@@ -14,6 +14,7 @@ namespace KopiAku.GraphQL.Presences
         private readonly IAmazonS3 _s3Client = s3Client;
         private readonly string _bucketName = "kopiaku-bucket";
 
+        // Check-In
         [Authorize]
         public async Task<Presence> CheckInAsync(
             [Service] IMongoDatabase database,
@@ -48,7 +49,7 @@ namespace KopiAku.GraphQL.Presences
                     UserId = userId,
                     CheckInTime = DateTime.UtcNow,
                     Validated = false,
-                    ImageUrl = $"https://storage.czn.id/{_bucketName}/{imageKey}"
+                    ImageUrl = $"https://storage.czn.my.id/{_bucketName}/{imageKey}"
                 };
 
                 await collection.InsertOneAsync(presence);
@@ -64,6 +65,7 @@ namespace KopiAku.GraphQL.Presences
             
         }
 
+        // Validate Presence
         [Authorize(Roles = new[] { "Admin" })]
         public async Task<Presence> ValidatePresenceAsync(
             [Service] IMongoDatabase database,

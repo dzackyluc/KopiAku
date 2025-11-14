@@ -22,16 +22,6 @@ namespace KopiAku.GraphQL.Users
         }
 
         [Authorize]
-        public async Task<User?> GetUserByIdAsync(
-            string id,
-            [Service] IMongoDatabase database)
-        {
-            var collection = database.GetCollection<User>("users");
-            var filter = Builders<User>.Filter.Eq(u => u.Id, id);
-            return await collection.Find(filter).FirstOrDefaultAsync();
-        }
-
-        [Authorize]
         public async Task<RegisterResponse> GetMyProfileAsync(
             [Service] IMongoDatabase database,
             ClaimsPrincipal claimsPrincipal)
