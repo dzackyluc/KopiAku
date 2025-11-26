@@ -80,6 +80,11 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 
 builder.Services.AddGraphQLServer()
+    .ModifyCostOptions(options =>
+    {
+        options.MaxFieldCost = 1000000;
+        options.MaxTypeCost = 1000000;
+    })
     .AddQueryType<Query>()
     .AddMutationType<Mutation>()
     .AddTypeExtension<UserQueries>()
