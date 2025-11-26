@@ -1,8 +1,6 @@
 using MongoDB.Driver;
 using KopiAku.Models;
-using HotChocolate;
 using HotChocolate.Authorization;
-using System.Security.Claims;
 
 namespace KopiAku.GraphQL.StocksManagement
 {
