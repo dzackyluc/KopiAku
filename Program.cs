@@ -13,6 +13,7 @@ using KopiAku.GraphQL.Users;
 using KopiAku.GraphQL.Menus;
 using KopiAku.GraphQL.Presences;
 using KopiAku.GraphQL.StocksManagement;
+using KopiAku.GraphQL.Recipes;
 
 Env.Load();
 
@@ -91,6 +92,8 @@ builder.Services.AddGraphQLServer()
     .AddTypeExtension<UserMutations>()
     .AddTypeExtension<MenuQueries>()
     .AddTypeExtension<MenuMutations>()
+    .AddTypeExtension<RecipeQueries>()
+    .AddTypeExtension<RecipeMutations>()
     .AddTypeExtension<PresenceQueries>()
     .AddTypeExtension<PresenceMutations>()
     .AddTypeExtension<StockManagementQueries>()

@@ -19,6 +19,9 @@ namespace KopiAku.Models
         [BsonElement("checkInTime")]
         public DateTime CheckInTime { get; set; }
 
+        [BsonElement("checkOutTime")]
+        public DateTime CheckOutTime { get; set; }
+
         [BsonElement("validated")]
         public bool Validated { get; set; }
     }

@@ -17,7 +17,10 @@ namespace KopiAku.GraphQL.StocksManagement
             int notificationThreshold,
             [Service] IMongoDatabase database)
         {
-            var collection = database.GetCollection<Stock>("stocks");
+            var menuCollection = database.GetCollection<Menu>("menus");
+            var stockCollection = database.GetCollection<Stock>("stocks");
+            var recipeCollection = database.GetCollection<Recipe>("recipes");
+            var stockLogCollection = database.GetCollection<StockLog>("stock-logs");
 
             var newStock = new Stock
             {
@@ -26,8 +29,45 @@ namespace KopiAku.GraphQL.StocksManagement
                 Unit = unit,
                 NotificationThreshold = notificationThreshold
             };
+            await stockCollection.InsertOneAsync(newStock);
 
-            await collection.InsertOneAsync(newStock);
+            // Log the initial stock addition
+            var stockLog = new StockLog
+            {
+                StockId = newStock.Id,
+                Type = "in",
+                Quantity = quantity,
+                BeforeQuantity = 0,
+                AfterQuantity = quantity,
+                Reason = "Initial stock addition",
+                Timestamp = DateTime.UtcNow
+            };
+            await stockLogCollection.InsertOneAsync(stockLog);
+
+            // Update menu availability based on new stock
+            var recipes = await recipeCollection.Find(_ => true).ToListAsync();
+            foreach (var recipe in recipes)
+            {
+                bool isAvailable = true;
+                foreach (var ingredient in recipe.Ingredients)
+                {
+                    var stockItem = await stockCollection.Find(s => s.Id == ingredient.StockId).FirstOrDefaultAsync();
+                    if (stockItem == null || stockItem.Quantity < ingredient.Quantity)
+                    {
+                        isAvailable = false;
+                        break;
+                    }
+                }
+
+                var menu = await menuCollection.Find(m => m.Id == recipe.MenuId).FirstOrDefaultAsync();
+                
+                if (menu != null)
+                {
+                    menu.IsAvailable = isAvailable;
+                    await menuCollection.ReplaceOneAsync(m => m.Id == menu.Id, menu);
+                }
+            }
+
             return newStock;
         }
 
@@ -40,6 +80,8 @@ namespace KopiAku.GraphQL.StocksManagement
         {
             var stockCollection = database.GetCollection<Stock>("stocks");
             var stockLogCollection = database.GetCollection<StockLog>("stock-logs");
+            var menuCollection = database.GetCollection<Menu>("menus");
+            var recipeCollection = database.GetCollection<Recipe>("recipes");
 
             var stock = await stockCollection.Find(s => s.Id == stockId).FirstOrDefaultAsync() ?? throw new GraphQLException(new Error("Stock not found", "STOCK_NOT_FOUND"));
             var beforeQuantity = stock.Quantity;
@@ -59,6 +101,31 @@ namespace KopiAku.GraphQL.StocksManagement
             };
 
             await stockLogCollection.InsertOneAsync(stockLog);
+
+            // Update menu availability based on updated stock
+            var recipes = await recipeCollection.Find(_ => true).ToListAsync();
+            foreach (var recipe in recipes)
+            {
+                bool isAvailable = true;
+                foreach (var ingredient in recipe.Ingredients)
+                {
+                    var stockItem = await stockCollection.Find(s => s.Id == ingredient.StockId).FirstOrDefaultAsync();
+                    if (stockItem == null || stockItem.Quantity < ingredient.Quantity)
+                    {
+                        isAvailable = false;
+                        break;
+                    }
+                }
+
+                var menu = await menuCollection.Find(m => m.Id == recipe.MenuId).FirstOrDefaultAsync();
+
+                if (menu != null)
+                {
+                    menu.IsAvailable = isAvailable;
+                    await menuCollection.ReplaceOneAsync(m => m.Id == menu.Id, menu);
+                }
+            }
+
             return stockLog;
         }
 
@@ -72,7 +139,16 @@ namespace KopiAku.GraphQL.StocksManagement
         {
             var stockCollection = database.GetCollection<Stock>("stocks");
             var stockLogCollection = database.GetCollection<StockLog>("stock-logs");
+            var menuCollection = database.GetCollection<Menu>("menus");
+            var recipeCollection = database.GetCollection<Recipe>("recipes");
+
             var stock = await stockCollection.Find(s => s.Id == stockId).FirstOrDefaultAsync() ?? throw new GraphQLException(new Error("Stock not found", "STOCK_NOT_FOUND"));
+
+            if (stock.Quantity < quantity)
+            {
+                throw new GraphQLException(new Error("Insufficient stock quantity", "INSUFFICIENT_STOCK"));
+            }
+
             var beforeQuantity = stock.Quantity;
             stock.Quantity -= quantity;
 
@@ -90,6 +166,31 @@ namespace KopiAku.GraphQL.StocksManagement
             };
 
             await stockLogCollection.InsertOneAsync(stockLog);
+
+            // Update menu availability based on updated stock
+            var recipes = await recipeCollection.Find(_ => true).ToListAsync();
+            foreach (var recipe in recipes)
+            {
+                bool isAvailable = true;
+                foreach (var ingredient in recipe.Ingredients)
+                {
+                    var stockItem = await stockCollection.Find(s => s.Id == ingredient.StockId).FirstOrDefaultAsync();
+                    if (stockItem == null || stockItem.Quantity < ingredient.Quantity)
+                    {
+                        isAvailable = false;
+                        break;
+                    }
+                }
+
+                var menu = await menuCollection.Find(m => m.Id == recipe.MenuId).FirstOrDefaultAsync();
+
+                if (menu != null)
+                {
+                    menu.IsAvailable = isAvailable;
+                    await menuCollection.ReplaceOneAsync(m => m.Id == menu.Id, menu);
+                }
+            }
+
             return stockLog;
         }
 
@@ -99,8 +200,18 @@ namespace KopiAku.GraphQL.StocksManagement
         {
             var stockCollection = database.GetCollection<Stock>("stocks");
             var stockLogCollection = database.GetCollection<StockLog>("stock-logs");
+            var menuCollection = database.GetCollection<Menu>("menus");
+            var recipeCollection = database.GetCollection<Recipe>("recipes");
 
             var stock = await stockCollection.Find(s => s.Id == stockId).FirstOrDefaultAsync() ?? throw new GraphQLException(new Error("Stock not found", "STOCK_NOT_FOUND"));
+
+            // Check if the stock is used in any recipe
+            var recipesUsingStock = await recipeCollection.Find(r => r.Ingredients.Any(i => i.StockId == stockId)).ToListAsync();
+            if (recipesUsingStock.Count > 0)
+            {
+                throw new GraphQLException(new Error("Cannot delete stock item as it is used in one or more recipes", "STOCK_IN_USE"));
+            }
+
             await stockCollection.DeleteOneAsync(s => s.Id == stockId);
             await stockLogCollection.DeleteManyAsync(sl => sl.StockId == stockId);
 
@@ -118,6 +229,8 @@ namespace KopiAku.GraphQL.StocksManagement
             [Service] IMongoDatabase database)
         {
             var stockCollection = database.GetCollection<Stock>("stocks");
+            var menuCollection = database.GetCollection<Menu>("menus");
+            var recipeCollection = database.GetCollection<Recipe>("recipes");
 
             var stock = await stockCollection.Find(s => s.Id == stockId).FirstOrDefaultAsync() ?? throw new GraphQLException(new Error("Stock not found", "STOCK_NOT_FOUND"));
 
@@ -129,6 +242,30 @@ namespace KopiAku.GraphQL.StocksManagement
                 stock.Unit = unit;
             if (notificationThreshold.HasValue)
                 stock.NotificationThreshold = notificationThreshold.Value;
+
+            // Update menu availability based on updated stock
+            var recipes = await recipeCollection.Find(_ => true).ToListAsync();
+            foreach (var recipe in recipes)
+            {
+                bool isAvailable = true;
+                foreach (var ingredient in recipe.Ingredients)
+                {
+                    var stockItem = await stockCollection.Find(s => s.Id == ingredient.StockId).FirstOrDefaultAsync();
+                    if (stockItem == null || stockItem.Quantity < ingredient.Quantity)
+                    {
+                        isAvailable = false;
+                        break;
+                    }
+                }
+
+                var menu = await menuCollection.Find(m => m.Id == recipe.MenuId).FirstOrDefaultAsync();
+
+                if (menu != null)
+                {
+                    menu.IsAvailable = isAvailable;
+                    await menuCollection.ReplaceOneAsync(m => m.Id == menu.Id, menu);
+                }
+            }
 
             await stockCollection.ReplaceOneAsync(s => s.Id == stockId, stock);
             return stock;

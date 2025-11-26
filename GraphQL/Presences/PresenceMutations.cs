@@ -65,6 +65,31 @@ namespace KopiAku.GraphQL.Presences
             
         }
 
+        // Check-Out
+        [Authorize]
+        public async Task<Presence> CheckOutAsync(
+            [Service] IMongoDatabase database,
+            ClaimsPrincipal claimsPrincipal)
+        {
+            var collection = database.GetCollection<Presence>("presences");
+            var userId = (claimsPrincipal.FindFirst("sub")?.Value
+                     ?? claimsPrincipal.FindFirst(ClaimTypes.NameIdentifier)?.Value) ?? throw new GraphQLException(ErrorBuilder.New()
+                    .SetMessage("User ID not found in claims.")
+                    .SetCode("USER_ID_NOT_FOUND")
+                    .Build());
+
+            var filter = Builders<Presence>.Filter.Eq(p => p.UserId, userId) &
+                         Builders<Presence>.Filter.Gte(p => p.CheckInTime, DateTime.UtcNow.AddHours(-1));
+
+            var presence = await collection.Find(filter).FirstOrDefaultAsync() ?? throw new GraphQLException(ErrorBuilder.New()
+                    .SetMessage("No active presence found.")
+                    .SetCode("NO_ACTIVE_PRESENCE")
+                    .Build());
+            presence.CheckOutTime = DateTime.UtcNow;
+            await collection.ReplaceOneAsync(filter, presence);
+            return presence;
+        }
+
         // Validate Presence
         [Authorize(Roles = new[] { "Admin" })]
         public async Task<Presence> ValidatePresenceAsync(
