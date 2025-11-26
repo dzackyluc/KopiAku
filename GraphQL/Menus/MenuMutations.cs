@@ -39,7 +39,8 @@ namespace KopiAku.GraphQL.Menus
                     Name = menu.Name,
                     Description = menu.Description,
                     Price = menu.Price,
-                    ImageUrl = $"https://storage.czn.my.id/{_bucketName}/{imageKey}"
+                    ImageUrl = $"https://storage.czn.my.id/{_bucketName}/{imageKey}",
+                    IsAvailable = false
                 };
                 await collection.InsertOneAsync(newMenu);
                 return newMenu;
