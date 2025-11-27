@@ -16,6 +16,7 @@ using KopiAku.GraphQL.Presences;
 using KopiAku.GraphQL.Transactions;
 using KopiAku.GraphQL.StocksManagement;
 using KopiAku.GraphQL.ContentsManagement;
+using Microsoft.AspNetCore.DataProtection;
 
 Env.Load();
 
@@ -80,6 +81,23 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Configure Kestrel for containerized deployment
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(8080);
+});
+
+// Configure Data Protection for containers
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo("/app/keys"))
+    .SetApplicationName("KopiAku");
+
+// Handle graceful shutdown
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.ShutdownTimeout = TimeSpan.FromSeconds(30);
+});
+
 builder.Services.AddControllers();
 
 builder.Services.AddGraphQLServer()
@@ -116,6 +134,7 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.UseHsts();
     app.MapOpenApi();
 }
 
