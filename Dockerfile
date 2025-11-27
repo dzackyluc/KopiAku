@@ -15,5 +15,5 @@ RUN dotnet publish "KopiAku.csproj" -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-EXPOSE 5031
+EXPOSE 8080
 ENTRYPOINT ["dotnet", "KopiAku.dll"]
