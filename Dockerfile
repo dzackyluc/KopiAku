@@ -1,5 +1,7 @@
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
+EXPOSE 5031
+ENV ASPNETCORE_ENVIRONMENT=Development
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
@@ -15,5 +17,4 @@ RUN dotnet publish "KopiAku.csproj" -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-EXPOSE 8080
 ENTRYPOINT ["dotnet", "KopiAku.dll"]
