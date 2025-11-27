@@ -1,6 +1,7 @@
 using MongoDB.Driver;
 using KopiAku.Models;
 using HotChocolate.Authorization;
+using KopiAku.DTOs;
 
 namespace KopiAku.GraphQL.Transactions
 {
@@ -9,7 +10,7 @@ namespace KopiAku.GraphQL.Transactions
     {
         [Authorize]
         public async Task<Transaction> CreateTransactionAsync(
-            Transaction transaction,
+            TransactionInput transaction,
             [Service] IMongoDatabase database)
         {
             var transactionCollection = database.GetCollection<Transaction>("transactions");
